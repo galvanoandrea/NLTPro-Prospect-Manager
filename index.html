@@ -552,6 +552,14 @@
           <label>Categoria attività</label>
           <input type="text" id="fCategory" placeholder="es. Trasporti, Edilizia…">
         </div>
+        <div class="field">
+          <label>Codice Fiscale</label>
+          <input type="text" id="fCodiceFiscale" placeholder="es. RSSMRA80A01H501Z" maxlength="16" style="text-transform:uppercase">
+        </div>
+        <div class="field">
+          <label>Partita IVA</label>
+          <input type="text" id="fPartitaIva" placeholder="es. 12345678901" maxlength="11">
+        </div>
         <div class="field full">
           <label>Sito web</label>
           <input type="url" id="fWebsite" placeholder="https://…">
@@ -816,7 +824,9 @@ function renderList() {
           ${p.city     ? `<span><span class="ico">📍</span>${escHtml(p.city)}</span>` : ''}
           ${p.category ? `<span><span class="ico">🏭</span>${escHtml(p.category)}</span>` : ''}
           ${p.email    ? `<span><span class="ico">✉</span><a href="mailto:${escAttr(p.email)}" style="color:inherit;text-decoration:none">${escHtml(p.email)}</a></span>` : ''}
-          ${p.website  ? `<span><span class="ico">🌐</span><a href="${escAttr(p.website)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${escHtml(p.website.replace(/^https?:\/\//,''))}</a></span>` : ''}
+          ${p.website       ? `<span><span class="ico">🌐</span><a href="${escAttr(p.website)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${escHtml(p.website.replace(/^https?:\/\//,''))}</a></span>` : ''}
+          ${p.codiceFiscale ? `<span><span class="ico">🪪</span>CF: ${escHtml(p.codiceFiscale)}</span>` : ''}
+          ${p.partitaIva    ? `<span><span class="ico">🧾</span>P.IVA: ${escHtml(p.partitaIva)}</span>` : ''}
           ${p.vehicleType && p.vehicleType !== 'non_so' ? `<span><span class="ico">🚗</span>${vLabel}</span>` : ''}
           ${p.vehicleCount ? `<span><span class="ico">🔢</span>${p.vehicleCount} veicoli</span>` : ''}
           ${p.km ? `<span><span class="ico">🛣</span>${Number(p.km).toLocaleString('it-IT')} km/anno</span>` : ''}
@@ -853,8 +863,10 @@ function openModal(id) {
     document.getElementById('fKm').value         = p.km          || '';
     document.getElementById('fCity').value        = p.city        || '';
     document.getElementById('fCategory').value   = p.category    || '';
-    document.getElementById('fWebsite').value    = p.website     || '';
-    document.getElementById('fStatus').value     = p.status      || 'da_chiamare';
+    document.getElementById('fWebsite').value         = p.website        || '';
+    document.getElementById('fCodiceFiscale').value  = p.codiceFiscale  || '';
+    document.getElementById('fPartitaIva').value     = p.partitaIva     || '';
+    document.getElementById('fStatus').value          = p.status         || 'da_chiamare';
     document.getElementById('fFollowup').value   = p.followup    || '';
     document.getElementById('fNotes').value      = p.notes       || '';
   } else {
@@ -887,7 +899,9 @@ function saveProspect(e) {
     email:        document.getElementById('fEmail').value.trim(),
     city:         document.getElementById('fCity').value.trim(),
     category:     document.getElementById('fCategory').value.trim(),
-    website:      document.getElementById('fWebsite').value.trim(),
+    website:       document.getElementById('fWebsite').value.trim(),
+    codiceFiscale: document.getElementById('fCodiceFiscale').value.trim().toUpperCase(),
+    partitaIva:    document.getElementById('fPartitaIva').value.trim(),
     vehicleType:  document.getElementById('fVehicleType').value,
     vehicleCount: document.getElementById('fVehicleCount').value || '',
     km:           document.getElementById('fKm').value || '',
@@ -940,13 +954,13 @@ function exportCSV() {
   if (prospects.length === 0) { showToast('Nessun dato da esportare', 'error'); return; }
 
   const headers = [
-    'Azienda','Referente','Città','Categoria','Telefono','Email','Sito',
+    'Azienda','Referente','Città','Categoria','Codice Fiscale','Partita IVA','Telefono','Email','Sito',
     'Tipo Veicolo','N. Veicoli','Km Annui',
     'Stato','Follow-up','Note','Creato'
   ];
 
   const rows = prospects.map(p => [
-    p.company, p.contact, p.city, p.category, p.phone, p.email, p.website,
+    p.company, p.contact, p.city, p.category, p.codiceFiscale, p.partitaIva, p.phone, p.email, p.website,
     VEHICLE_MAP[p.vehicleType] || p.vehicleType,
     p.vehicleCount, p.km,
     STATUS_MAP[p.status]?.label || p.status,
