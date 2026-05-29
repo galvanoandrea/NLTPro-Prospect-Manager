@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NLT Prospect Manager</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   :root {
     --bg: #0f0f0f;
@@ -706,6 +706,11 @@
 // ── SUPABASE ──────────────────────────────────────────────────────────────
 const _SB_URL  = 'https://sqzkbwanmzvfqrwemyrz.supabase.co';
 const _SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxemtid2FubXp2ZnFyd2VteXJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzM1ODQsImV4cCI6MjA5NTY0OTU4NH0.bJ956Rh_8037Gbf8P7tBryvgqStUjLipgjHf5J-ZcRM';
+
+if (typeof supabase === 'undefined') {
+  document.getElementById('pinSubtitle').textContent = 'Errore: libreria non caricata. Ricarica la pagina.';
+  throw new Error('supabase-js not loaded');
+}
 const sb = supabase.createClient(_SB_URL, _SB_KEY);
 
 // ── DATA ──────────────────────────────────────────────────────────────────
@@ -868,12 +873,20 @@ async function _enterApp() {
         const { count } = await sb.from('prospects').select('id', { count: 'exact', head: true });
         if (count === 0) {
           const rows = local.map(p => appToDB({ codiceFiscale:'', partitaIva:'', ...p }));
-          await sb.from('prospects').insert(rows);
-          showToast(`✅ Migrati ${local.length} prospect dal dispositivo`, 'success');
+          const { error: insErr } = await sb.from('prospects').insert(rows);
+          if (!insErr) {
+            showToast(`✅ Migrati ${local.length} prospect dal dispositivo`, 'success');
+            localStorage.removeItem(STORAGE_KEY); // rimuove solo se migrazione riuscita
+          } else {
+            console.error('Migration insert error', insErr);
+          }
+        } else {
+          localStorage.removeItem(STORAGE_KEY); // DB non vuoto, rimuove locale per evitare duplicati futuri
         }
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
       }
     } catch(e) { console.error('Migration error', e); }
-    localStorage.removeItem(STORAGE_KEY);
   }
 
   await loadFromDB();
