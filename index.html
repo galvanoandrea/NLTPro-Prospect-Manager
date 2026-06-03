@@ -476,6 +476,52 @@
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
+  /* ── BULK SELECT ── */
+  .bulk-bar {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    z-index: 200;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .bulk-bar.visible { display: flex; }
+  .bulk-bar-left { display: flex; align-items: center; gap: 10px; }
+  .bulk-count { font-size: 14px; font-weight: 600; color: var(--text); }
+  .bulk-count span { color: var(--red); }
+  .btn-select-mode {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text-muted); padding: 7px 12px; font-size: 13px;
+    border-radius: var(--radius); cursor: pointer; font-family: inherit;
+    transition: all .15s;
+  }
+  .btn-select-mode:hover { border-color: var(--text-muted); color: var(--text); }
+  .btn-select-mode.active { background: var(--red-glow); border-color: var(--red); color: var(--red); }
+  .prospect-card.selectable { cursor: pointer; padding-left: 44px; position: relative; }
+  .card-checkbox {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 20px; height: 20px; border-radius: 5px;
+    border: 2px solid var(--border); background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all .15s; pointer-events: none;
+  }
+  .prospect-card.selected .card-checkbox {
+    background: var(--red); border-color: var(--red);
+  }
+  .prospect-card.selected .card-checkbox::after {
+    content: '✓'; color: #fff; font-size: 12px; font-weight: 700;
+  }
+  .prospect-card.selected {
+    border-color: var(--red);
+    background: linear-gradient(135deg, #1f1010, var(--surface));
+  }
+  main.has-bulk-bar { padding-bottom: 70px; }
+
   /* ── PIN SCREEN ── */
   .pin-overlay {
     position: fixed; inset: 0;
@@ -591,11 +637,22 @@
       <div class="sort-pill" data-sort="company" onclick="setSort('company', this)">Azienda A-Z</div>
       <div class="sort-pill" data-sort="created" onclick="setSort('created', this)">Più recenti</div>
     </div>
+    <button class="btn-select-mode" id="btnSelectMode" onclick="toggleSelectionMode()">☑ Seleziona</button>
   </div>
 
   <div class="prospect-count" id="prospectCount"></div>
   <div id="prospectList"></div>
 </main>
+
+<!-- BULK ACTION BAR -->
+<div class="bulk-bar" id="bulkBar">
+  <div class="bulk-bar-left">
+    <span class="bulk-count"><span id="bulkCount">0</span> selezionati</span>
+    <button class="btn-ghost" onclick="bulkSelectAll()">Seleziona tutti</button>
+    <button class="btn-ghost" onclick="bulkDeselectAll()">Deseleziona tutti</button>
+  </div>
+  <button class="btn-danger" style="padding:8px 16px;font-size:13px" onclick="bulkDeleteConfirm()">🗑 Elimina selezionati</button>
+</div>
 
 <!-- MODAL FORM -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeOnBackdrop(event)">
@@ -716,6 +773,8 @@ const sb = supabase.createClient(_SB_URL, _SB_KEY);
 // ── DATA ──────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'nlt_prospects_v1';
 let prospects = [];
+let selectedIds = new Set();
+let selectionMode = false;
 let currentSort = 'followup';
 let deleteTargetId = null;
 
@@ -779,6 +838,70 @@ async function upsertToDB(p) {
 async function deleteFromDB(id) {
   const { error } = await sb.from('prospects').delete().eq('id', id);
   if (error) showToast('Errore eliminazione', 'error');
+}
+
+// ── BULK SELECT ───────────────────────────────────────────────────────────
+function toggleSelectionMode() {
+  selectionMode = !selectionMode;
+  if (!selectionMode) {
+    selectedIds.clear();
+    _updateBulkBar();
+  }
+  document.getElementById('btnSelectMode').classList.toggle('active', selectionMode);
+  document.querySelector('main').classList.toggle('has-bulk-bar', selectionMode);
+  renderList();
+}
+
+function toggleSelectCard(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  // aggiorna solo la card, non tutta la lista
+  const card = document.querySelector(`.prospect-card[data-id="${id}"]`);
+  if (card) card.classList.toggle('selected', selectedIds.has(id));
+  _updateBulkBar();
+}
+
+function bulkSelectAll() {
+  // seleziona tutte le card attualmente visibili
+  document.querySelectorAll('.prospect-card[data-id]').forEach(c => {
+    selectedIds.add(c.dataset.id);
+    c.classList.add('selected');
+  });
+  _updateBulkBar();
+}
+
+function bulkDeselectAll() {
+  selectedIds.clear();
+  document.querySelectorAll('.prospect-card').forEach(c => c.classList.remove('selected'));
+  _updateBulkBar();
+}
+
+function _updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  const n   = selectedIds.size;
+  document.getElementById('bulkCount').textContent = n;
+  bar.classList.toggle('visible', selectionMode && n > 0);
+}
+
+async function bulkDeleteConfirm() {
+  const n = selectedIds.size;
+  if (n === 0) return;
+  if (!confirm(`Eliminare ${n} prospect selezionati? L'operazione non può essere annullata.`)) return;
+
+  const ids = [...selectedIds];
+  prospects = prospects.filter(p => !ids.includes(p.id));
+  selectedIds.clear();
+  selectionMode = false;
+  document.getElementById('btnSelectMode').classList.remove('active');
+  document.querySelector('main').classList.remove('has-bulk-bar');
+  _updateBulkBar();
+  renderStats();
+  renderList();
+  showToast(`🗑 Eliminati ${n} prospect`, 'info');
+
+  // elimina da Supabase in batch
+  const { error } = await sb.from('prospects').delete().in('id', ids);
+  if (error) showToast('Errore eliminazione su cloud', 'error');
 }
 
 function genId() {
@@ -1079,17 +1202,23 @@ function renderList() {
       ? `<button class="btn-contacted" onclick="markContacted('${p.id}')">📞 Contattato →</button>`
       : '';
 
+    const isSelected = selectedIds.has(p.id);
+    const selectableClass = selectionMode ? ' selectable' + (isSelected ? ' selected' : '') : '';
+    const checkboxHtml = selectionMode ? `<div class="card-checkbox"></div>` : '';
+    const cardClick = selectionMode ? `onclick="toggleSelectCard('${p.id}')"` : '';
+
     return `
-      <div class="prospect-card ${uClass}" data-id="${p.id}">
+      <div class="prospect-card ${uClass}${selectableClass}" data-id="${p.id}" ${cardClick}>
+        ${checkboxHtml}
         <div class="card-top">
           <div class="card-title">
             <span class="badge ${sInfo.cls}"><span class="sdot"></span>${sInfo.icon} ${sInfo.label}</span>
             ${escHtml(p.company)}
           </div>
           <div class="card-actions">
-            ${contactedBtn}
-            <button class="btn-edit" onclick="openModal('${p.id}')">✏</button>
-            <button class="btn-danger" onclick="askDelete('${p.id}', '${escAttr(p.company)}')">✕</button>
+            ${selectionMode ? '' : contactedBtn}
+            ${selectionMode ? '' : `<button class="btn-edit" onclick="openModal('${p.id}')">✏</button>`}
+            ${selectionMode ? '' : `<button class="btn-danger" onclick="askDelete('${p.id}', '${escAttr(p.company)}')">✕</button>`}
           </div>
         </div>
         <div class="card-keyinfo">
