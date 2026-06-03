@@ -1287,12 +1287,24 @@ function importXlsx(event) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      const dataRows = rows.slice(8);
+      const dataRows = rows.slice(1); // riga 0 = intestazione, importa tutto dal resto
 
       if (dataRows.length === 0) {
-        showToast('Nessuna riga da importare dopo riga 9', 'error');
+        showToast('Nessuna riga da importare', 'error');
         return;
       }
+
+      const STATUS_IMPORT_MAP = {
+        'da chiamare': 'da_chiamare',
+        'chiamato – richiamare': 'da_richiamare',
+        'chiamato - richiamare': 'da_richiamare',
+        'richiamare': 'da_richiamare',
+        'interesse': 'interesse',
+        'appuntamento': 'appuntamento',
+        'appuntamento fissato': 'appuntamento',
+        'mail inviata': 'mail_inviata',
+        'chiuso negativo': 'chiuso_negativo',
+      };
 
       let added = 0, skipped = 0;
       const newProspects = [];
@@ -1300,26 +1312,37 @@ function importXlsx(event) {
         const company = String(row[0] || '').trim();
         if (!company) { skipped++; return; }
 
-        const exists = prospects.some(p => p.company.toLowerCase() === company.toLowerCase());
+        const phone = String(row[3] || '').trim();
+
+        // anti-duplicati: stesso nome azienda (case-insensitive) o stesso telefono
+        const exists = prospects.some(p =>
+          p.company.toLowerCase() === company.toLowerCase() ||
+          (phone && p.phone && p.phone === phone)
+        );
         if (exists) { skipped++; return; }
+
+        const rawStatus = String(row[9] || '').trim().toLowerCase();
+        const status = STATUS_IMPORT_MAP[rawStatus] || 'da_chiamare';
+
+        const motivazione = String(row[8] || '').trim();
 
         const p = {
           id:            genId(),
           company,
           contact:       '',
-          phone:         String(row[6]  || '').trim(),
+          phone,
           email:         '',
           city:          String(row[2]  || '').trim(),
-          category:      String(row[16] || '').trim(),
+          category:      String(row[1]  || '').trim(),
           website:       String(row[5]  || '').trim(),
           codiceFiscale: '',
           partitaIva:    '',
           vehicleType:   'non_so',
           vehicleCount:  '',
           km:            '',
-          status:        'da_chiamare',
+          status,
           followup:      '',
-          notes:         '',
+          notes:         motivazione,
           createdAt:     Date.now(),
           updatedAt:     Date.now(),
         };
