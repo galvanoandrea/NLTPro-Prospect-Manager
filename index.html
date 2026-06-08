@@ -632,6 +632,33 @@
       <option value="today">📅 Oggi</option>
       <option value="soon">🔔 Entro 3 giorni</option>
     </select>
+    <select id="filterCategory" onchange="renderList()">
+      <option value="">Tutte le categorie</option>
+      <option value="Imprese di Pulizie">🧹 Imprese di Pulizie</option>
+      <option value="Trasporti">🚛 Trasporti</option>
+      <option value="Logistica">📦 Logistica</option>
+      <option value="Edilizia">🏗 Edilizia</option>
+      <option value="Alimentare">🍽 Alimentare</option>
+      <option value="Manifattura">🏭 Manifattura</option>
+      <option value="Commercio">🛒 Commercio</option>
+      <option value="Artigianato">🔧 Artigianato</option>
+      <option value="Servizi">💼 Servizi alle Imprese</option>
+    </select>
+    <select id="filterCity" onchange="renderList()">
+      <option value="">Tutte le città</option>
+      <option value="Milano">Milano</option>
+      <option value="Bergamo">Bergamo</option>
+      <option value="Brescia">Brescia</option>
+      <option value="Como">Como</option>
+      <option value="Cremona">Cremona</option>
+      <option value="Lecco">Lecco</option>
+      <option value="Lodi">Lodi</option>
+      <option value="Mantova">Mantova</option>
+      <option value="Monza">Monza</option>
+      <option value="Pavia">Pavia</option>
+      <option value="Sondrio">Sondrio</option>
+      <option value="Varese">Varese</option>
+    </select>
     <div class="sort-pills">
       <div class="sort-pill active" data-sort="followup" onclick="setSort('followup', this)">Data follow-up</div>
       <div class="sort-pill" data-sort="company" onclick="setSort('company', this)">Azienda A-Z</div>
@@ -1142,16 +1169,20 @@ function setSort(key, el) {
 }
 
 function renderList() {
-  const search  = document.getElementById('searchInput').value.toLowerCase();
-  const status  = document.getElementById('filterStatus').value;
-  const urgency = document.getElementById('filterUrgency').value;
+  const search   = document.getElementById('searchInput').value.toLowerCase();
+  const status   = document.getElementById('filterStatus').value;
+  const urgency  = document.getElementById('filterUrgency').value;
+  const category = document.getElementById('filterCategory').value.toLowerCase();
+  const city     = document.getElementById('filterCity').value.toLowerCase();
 
   let list = prospects.filter(p => {
-    const matchSearch = !search || [p.company, p.contact, p.phone, p.email, p.notes, p.city, p.category, p.website]
+    const matchSearch   = !search   || [p.company, p.contact, p.phone, p.email, p.notes, p.city, p.category, p.website]
       .some(v => (v||'').toLowerCase().includes(search));
-    const matchStatus = !status || p.status === status;
-    const matchUrgency = !urgency || urgencyClass(p.followup) === urgency;
-    return matchSearch && matchStatus && matchUrgency;
+    const matchStatus   = !status   || p.status === status;
+    const matchUrgency  = !urgency  || urgencyClass(p.followup) === urgency;
+    const matchCategory = !category || (p.category||'').toLowerCase().includes(category);
+    const matchCity     = !city     || (p.city||'').toLowerCase().includes(city);
+    return matchSearch && matchStatus && matchUrgency && matchCategory && matchCity;
   });
 
   // Sort
