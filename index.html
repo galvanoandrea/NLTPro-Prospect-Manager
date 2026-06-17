@@ -135,6 +135,8 @@
   .stat-card.warning .num { color: var(--amber); }
   .stat-card.interest .num { color: #60a5fa; }
   .stat-card.appt .num { color: var(--green); }
+  .stat-card.richiamare .num { color: #d97706; }
+  .stat-card.chiuso-neg-stat .num { color: #ff6b6b; }
 
   /* ── FILTERS ── */
   .filters {
@@ -1133,11 +1135,13 @@ const VEHICLE_MAP = {
 
 // ── STATS ─────────────────────────────────────────────────────────────────
 function renderStats() {
-  const total     = prospects.length;
-  const overdue   = prospects.filter(p => urgencyClass(p.followup) === 'overdue' && p.status !== 'chiuso_negativo').length;
-  const today_n   = prospects.filter(p => urgencyClass(p.followup) === 'today').length;
-  const interesse = prospects.filter(p => p.status === 'interesse').length;
-  const appt      = prospects.filter(p => p.status === 'appuntamento').length;
+  const total        = prospects.length;
+  const overdue      = prospects.filter(p => urgencyClass(p.followup) === 'overdue' && p.status !== 'chiuso_negativo').length;
+  const today_n      = prospects.filter(p => urgencyClass(p.followup) === 'today').length;
+  const interesse    = prospects.filter(p => p.status === 'interesse').length;
+  const appt         = prospects.filter(p => p.status === 'appuntamento').length;
+  const daRichiamare = prospects.filter(p => p.status === 'da_richiamare').length;
+  const chiusiNeg    = prospects.filter(p => p.status === 'chiuso_negativo').length;
 
   document.getElementById('statsBar').innerHTML = `
     <div class="stat-card">
@@ -1152,6 +1156,10 @@ function renderStats() {
       <div class="num">${today_n}</div>
       <div class="lbl">Oggi</div>
     </div>
+    <div class="stat-card richiamare">
+      <div class="num">${daRichiamare}</div>
+      <div class="lbl">Da richiamare</div>
+    </div>
     <div class="stat-card interest">
       <div class="num">${interesse}</div>
       <div class="lbl">Interesse</div>
@@ -1159,6 +1167,10 @@ function renderStats() {
     <div class="stat-card appt">
       <div class="num">${appt}</div>
       <div class="lbl">Appuntamenti</div>
+    </div>
+    <div class="stat-card chiuso-neg-stat">
+      <div class="num">${chiusiNeg}</div>
+      <div class="lbl">Chiusi negativi</div>
     </div>
   `;
 }
