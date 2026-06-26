@@ -1488,7 +1488,7 @@ function importXlsx(event) {
         const company = String(row[0] || '').trim();
         if (!company) { skipped++; return; }
 
-        const phone = String(row[3] || '').trim();
+        const phone = String(row[2] || '').trim();
 
         // anti-duplicati: stesso nome azienda (case-insensitive) O stesso telefono
         const exists = prospects.some(p =>
@@ -1506,9 +1506,9 @@ function importXlsx(event) {
           contact:       '',
           phone,
           email:         '',
-          city:          String(row[2]  || '').trim(),
-          category:      String(row[1]  || '').trim(),
-          website:       String(row[5]  || '').trim(),
+          city:          String(row[6]  || '').trim(),
+          category:      String(row[5]  || '').trim(),
+          website:       String(row[3]  || '').trim(),
           codiceFiscale: '',
           partitaIva:    '',
           vehicleType:   'non_so',
